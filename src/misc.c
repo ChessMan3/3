@@ -30,7 +30,7 @@
 
 // Version number. If Version is left empty, then compile date in the format
 // DD-MM-YY and show in engine_info.
-char Version[] = "";
+char Version[] = "v1.0";
 
 #ifndef __WIN32__
 pthread_mutex_t io_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -108,7 +108,7 @@ void print_engine_info(int to_uci)
 {
   char my_date[64];
 
-  printf("Cfish %s", Version);
+  printf("Aristides %s", Version);
 
   if (strlen(Version) == 0) {
     int day, month, year;
@@ -129,7 +129,7 @@ void print_engine_info(int to_uci)
                      , HasNuma ? " NUMA" : ""
                      , to_uci ? "\nid author T. Romstad, M. Costalba, "
                                 "J. Kiiski, G. Linscott"
-                              : " by Syzygy based on Stockfish");
+                              : " by burnzie based on Cfish/Stockfish");
   fflush(stdout);
 }
 
