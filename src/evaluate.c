@@ -173,7 +173,7 @@ static const int KingAttackWeights[8] = { 0, 0, 78, 56, 45, 11 };
 
 
 // Threshold for lazy evaluation
-const Value LazyEval = (1500);
+const Value LazyThreshold = (1500);
 
 // eval_init() initializes king and attack bitboards for a given color
 // adding pawn attacks. To be done at the beginning of the evaluation.
@@ -704,17 +704,6 @@ INLINE int evaluate_scale_factor(const Pos *pos, EvalInfo *ei, Value eg)
   return sf;
 }
 
-Value lazy_eval(Value mg, Value eg) {
-  
-  if (mg > LazyEval && eg > LazyEval)
-    return  LazyEval + ((mg + eg) / 2 - LazyEval) / 4;
-  
-  else if (mg < -LazyEval && eg < -LazyEval)
-    return -LazyEval + ((mg + eg) / 2 + LazyEval) / 4;
-  
-  return VALUE_ZERO;
-  }
-
 // evaluate() is the main evaluation function. It returns a static evaluation
 // of the position from the point of view of the side to move.
 
@@ -723,6 +712,7 @@ Value evaluate(const Pos *pos)
   assert(!pos_checkers());
 
   Score mobility[2] = { SCORE_ZERO, SCORE_ZERO };
+  Value v
   EvalInfo ei;
 
   // Probe the material hash table
@@ -743,11 +733,10 @@ Value evaluate(const Pos *pos)
   ei.pi = pawn_probe(pos);
   score += ei.pi->score;
   
-  // We have taken into account all cheap evaluation terms.
-  // If score exceeds a threshold return a lazy evaluation.
-  Value lazy = lazy_eval(mg_value(score), eg_value(score));
-  if (lazy)
-    return pos_stm() == WHITE ? lazy : -lazy;
+  // Early exit if score is high
+  v = (mg_value(score) + eg_value(score)) / 2;
+  if (abs(v) > LazyThreshold)
+    return pos_stm() == WHITE ? v : -v;
 
   // Initialize attack and king safety bitboards.
   ei.attackedBy[WHITE][0] = ei.attackedBy[BLACK][0] = 0;
@@ -801,11 +790,10 @@ Value evaluate(const Pos *pos)
   int sf = evaluate_scale_factor(pos, &ei, eg);
 
   // Interpolate between a middlegame and a (scaled by 'sf') endgame score
-  //  Value v =  mg_value(score) * ei.me->gamePhase
-  //           + eg_value(score) * (PHASE_MIDGAME - ei.me->gamePhase) * sf / SCALE_FACTOR_NORMAL;
-  Value v =  mg_value(score) * ei.me->gamePhase
-           + eg * (PHASE_MIDGAME - ei.me->gamePhase) * sf / SCALE_FACTOR_NORMAL;
+   v =  mg_value(score) * ei.me->gamePhase
+      + eg * (PHASE_MIDGAME - ei.me->gamePhase) * sf / SCALE_FACTOR_NORMAL;
 
+  
   v /= PHASE_MIDGAME;
 
   return (pos_stm() == WHITE ? v : -v) + Tempo; // Side to move point of view
