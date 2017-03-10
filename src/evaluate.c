@@ -148,6 +148,7 @@ static const Score WeakQueen           = S(50, 10);
 static const Score OtherCheck          = S(10, 10);
 static const Score CloseEnemies        = S( 7,  0);
 static const Score PawnlessFlank       = S(20, 80);
+static const Score LooseEnemies        = S( 0, 25);
 static const Score ThreatByHangingPawn = S(71, 61);
 static const Score ThreatByRank        = S(16,  3);
 static const Score Hanging             = S(48, 27);
@@ -459,6 +460,11 @@ INLINE Score evaluate_threats(const Pos *pos, EvalInfo *ei, const int Us)
   Bitboard b, weak, defended, safeThreats;
   Score score = SCORE_ZERO;
 
+  // Small bonus if the opponent has loose pawns or pieces
+   if (  pieces_c(Them) & ~pieces_pp(QUEEN, KING)
+       & ~(ei->attackedBy[Us][0] | ei->attackedBy[Them][0]))
+     score += LooseEnemies;
+  
   // Non-pawn enemies attacked by a pawn
   weak = pieces_c(Them) & ~pieces_p(PAWN) & ei->attackedBy[Us][PAWN];
 
