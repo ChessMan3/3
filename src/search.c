@@ -333,8 +333,7 @@ void mainthread_search(void)
       Pos *p = Threads.pos[idx];
       Depth depthDiff = p->completedDepth - bestThread->completedDepth;
       Value scoreDiff = p->rootMoves->move[0].score - bestThread->rootMoves->move[0].score;
-      if (   (depthDiff > 0 && scoreDiff >= 0)
-          || (scoreDiff > 0 && depthDiff >= 0))
+      if (scoreDiff > 0 && depthDiff >= 0)
         bestThread = p;
     }
   }
