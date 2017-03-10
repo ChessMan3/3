@@ -64,7 +64,6 @@ struct EvalInfo {
   // this white knight adds 2 to kingAdjacentZoneAttacksCount[WHITE].
   int kingAdjacentZoneAttacksCount[2];
 
-  Bitboard pinnedPieces[2];
   MaterialEntry *me;
   PawnEntry *pi;
 };
@@ -182,7 +181,6 @@ INLINE void evalinfo_init(const Pos *pos, EvalInfo *ei, const int Us)
   const int Them = (Us == WHITE ? BLACK   : WHITE);
   const int Down = (Us == WHITE ? DELTA_S : DELTA_N);
 
-  ei->pinnedPieces[Us] = pinned_pieces(pos, Us);
   Bitboard b = ei->attackedBy[Them][KING];
   ei->attackedBy[Them][0] |= b;
   ei->attackedBy[Us][0] |= ei->attackedBy[Us][PAWN] = ei->pi->pawnAttacks[Us];
@@ -220,7 +218,7 @@ INLINE Score evaluate_piece(const Pos *pos, EvalInfo *ei, Score *mobility,
       : Pt == ROOK ? attacks_bb_rook(s, pieces() ^ pieces_cpp(Us, ROOK, QUEEN))
                    : attacks_from(Pt, s);
 
-    if (ei->pinnedPieces[Us] & sq_bb(s))
+    if (pinned_pieces(pos, Us) & sq_bb(s))
       b &= LineBB[square_of(Us, KING)][s];
 
     ei->attackedBy2[Us] |= ei->attackedBy[Us][0] & b;
@@ -371,7 +369,7 @@ INLINE Score evaluate_king(const Pos *pos, EvalInfo *ei, int Us)
     kingDanger =  min(807, ei->kingAttackersCount[Them] * ei->kingAttackersWeight[Them])
                 + 101 * ei->kingAdjacentZoneAttacksCount[Them]
                 + 235 * popcount(undefended)
-                + 134 * (popcount(b) + !!ei->pinnedPieces[Us])
+                + 134 * (popcount(b) + !!pinned_pieces(pos, Us))
                 - 717 * !pieces_cp(Them, QUEEN)
                 -   7 * mg_value(score) / 5 - 5;
 
