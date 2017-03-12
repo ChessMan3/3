@@ -123,7 +123,7 @@ INLINE Score pawn_evaluate(const Pos *pos, PawnEntry *e, const int Us)
     opposed    = !!(theirPawns & forward_bb(Us, s));
     stoppers   = theirPawns & passed_pawn_mask(Us, s);
     lever      = !!(theirPawns & pawnAttacksBB[s]);
-    leverPush  = !!(theirPawns & pawnAttacksBB[s + Up]);
+    leverPush  = theirPawns & pawnAttacksBB[s + Up];
     doubled    = ourPawns   & sq_bb(s + Up);
     neighbours = ourPawns   & adjacent_files_bb(f);
     phalanx    = neighbours & rank_bb_s(s);
