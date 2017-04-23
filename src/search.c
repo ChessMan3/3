@@ -58,11 +58,11 @@ static const int razor_margin[4] = { 483, 570, 603, 554 };
 
 // Futility and reductions lookup tables, initialized at startup
 static int FutilityMoveCounts[2][16]; // [improving][depth]
-static int Reductions[2][2][128][64];  // [pv][improving][depth][moveNumber]
+static int Reductions[2][2][64][64];  // [pv][improving][depth][moveNumber]
 
 INLINE Depth reduction(int i, Depth d, int mn, const int NT)
 {
-  return Reductions[NT][i][min(d / ONE_PLY, 127)][min(mn, 63)] * ONE_PLY;
+  return Reductions[NT][i][min(d / ONE_PLY, 63)][min(mn, 63)] * ONE_PLY;
 }
 
 // Skill structure is used to implement strength limit
@@ -181,9 +181,9 @@ static TimePoint lastInfoTime;
 void search_init(void)
 {
   for (int imp = 0; imp <= 1; imp++)
-    for (int d = 1; d < 128; ++d)
+    for (int d = 1; d < 64; ++d)
       for (int mc = 1; mc < 64; ++mc) {
-        double r = 0.22 * d * (1.0 - exp(-8.5 / d)) * log(mc);
+        double r = log(d) * log(mc) / 2;
 
         Reductions[NonPV][imp][d][mc] = ((int)lround(r));
         Reductions[PV][imp][d][mc] = max(Reductions[NonPV][imp][d][mc] - 1, 0);
@@ -194,8 +194,8 @@ void search_init(void)
       }
 
   for (int d = 0; d < 16; ++d) {
-    FutilityMoveCounts[0][d] = (int)(2.4 + 0.773 * pow(d + 0.00, 1.8));
-    FutilityMoveCounts[1][d] = (int)(2.9 + 1.045 * pow(d + 0.49, 1.8));
+    FutilityMoveCounts[0][d] = (int)(2.4 + 0.74 * pow(d, 1.78));
+    FutilityMoveCounts[1][d] = (int)(5.0 + 1.00 * pow(d, 2.00));
   }
 
   lastInfoTime = now();
@@ -214,9 +214,8 @@ void search_clear()
 
   for (int idx = 0; idx < Threads.num_threads; idx++) {
     Pos *pos = Threads.pos[idx];
-    stats_clear(pos->history);
     stats_clear(pos->counterMoves);
-    stats_clear(pos->fromTo);
+    stats_clear(pos->history);
   }
 
   mainThread.previousScore = VALUE_INFINITE;
@@ -333,7 +332,7 @@ void mainthread_search(void)
       Pos *p = Threads.pos[idx];
       Depth depthDiff = p->completedDepth - bestThread->completedDepth;
       Value scoreDiff = p->rootMoves->move[0].score - bestThread->rootMoves->move[0].score;
-      if ( (scoreDiff > 0 && depthDiff >= 0) )
+     if (scoreDiff > 0 && depthDiff >= 0)
         bestThread = p;
     }
   }
@@ -444,9 +443,9 @@ void thread_search(Pos *pos)
 
       // Reset aspiration window starting size
       if (pos->rootDepth >= 5 * ONE_PLY) {
-              delta = (Value)18;
-              alpha = max(rm->move[PVIdx].previousScore - delta,-VALUE_INFINITE);
-              beta  = min(rm->move[PVIdx].previousScore + delta, VALUE_INFINITE);
+        delta = (Value)18;
+        alpha = max(rm->move[PVIdx].previousScore - delta,-VALUE_INFINITE);
+        beta  = min(rm->move[PVIdx].previousScore + delta, VALUE_INFINITE);
       }
 
       // Start with a small aspiration window and, in the case of a fail
@@ -691,8 +690,7 @@ static void update_cm_stats(Stack *ss, Piece pc, Square s, Value bonus)
     cms_update(*fmh2, pc, s, bonus);
 }
 
-// update_stats() updates killers, history, countermove and countermove
-// plus follow-up move history when a new quiet best move is found.
+// update_stats() updates move sorting heuristics when a new quiet best move is found
 
 void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
                   int quietsCnt, Value bonus)
@@ -703,8 +701,7 @@ void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
   }
 
   int c = pos_stm();
-  ft_update(*pos->fromTo, c, move, bonus);
-  hs_update(*pos->history, moved_piece(move), to_sq(move), bonus);
+  hs_update(*pos->history, c, move, bonus);
   update_cm_stats(ss, moved_piece(move), to_sq(move), bonus);
 
   if ((ss-1)->counterMoves) {
@@ -714,8 +711,7 @@ void update_stats(const Pos *pos, Stack *ss, Move move, Move *quiets,
 
   // Decrease all the other played quiet moves
   for (int i = 0; i < quietsCnt; i++) {
-    ft_update(*pos->fromTo, c, quiets[i], -bonus);
-    hs_update(*pos->history, moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
+    hs_update(*pos->history, c, quiets[i], -bonus);
     update_cm_stats(ss, moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
   }
 }

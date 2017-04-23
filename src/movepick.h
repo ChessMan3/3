@@ -30,14 +30,20 @@
 
 #define stats_clear(s) memset(s, 0, sizeof(*s))
 
-INLINE void hs_update(HistoryStats hs, Piece pc, Square to, Value v)
+INLINE void hs_update(HistoryStats hs, int c, Move m, Value v)
 {
   int w = v >= 0 ? v : -v;
   if (w >= 324)
-    return;
-
-  hs[pc][to] -= hs[pc][to] * w / 324;
-  hs[pc][to] += ((int)v) * 32;
+     return;
+ 
+  m &= 4095;
+  hs[c][m] -= hs[c][m] * w / 324;
+  hs[c][m] += ((int)v) * 32;
+}
+ 
+INLINE Value hs_get(HistoryStats hs, int c, Move m)
+{
+  return hs[c][m & 4095];
 }
 
 INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, Value v)
@@ -48,22 +54,6 @@ INLINE void cms_update(CounterMoveStats cms, Piece pc, Square to, Value v)
 
   cms[pc][to] -= cms[pc][to] * w / 936;
   cms[pc][to] += ((int)v) * 32;
-}
-
-INLINE void ft_update(FromToStats ft, int c, Move m, Value v)
-{
-  int w = v >= 0 ? v : -v;
-  if (w >= 324)
-    return;
-
-  m &= 4095;
-  ft[c][m] -= ft[c][m] * w / 324;
-  ft[c][m] += ((int)v) * 32;
-}
-
-INLINE Value ft_get(FromToStats ft, int c, Move m)
-{
-  return ft[c][m & 4095];
 }
 
 #define ST_MAIN_SEARCH             0
